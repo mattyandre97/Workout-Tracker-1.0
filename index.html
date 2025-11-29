@@ -1,0 +1,2517 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Workout Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        /* ===========================
+           PALETTE / THEME VARIABLES
+        ============================ */
+        :root {
+            --bg-main: #020617;
+            --bg-elevated: #111827;
+            --bg-card: #020617;
+            --bg-soft: #0e0e1a;
+
+            --text-main: #f9fafb;
+            --text-muted: #e5e7eb;
+
+            --border-subtle: #111827;
+            --border-strong: #374151;
+
+            --accent: #22c55e;
+            --accent-hover: #16a34a;
+            --accent-soft: #4ade80;
+
+            --danger: #dc2626;
+            --danger-strong: #b91c1c;
+
+            --warning: #f59e0b;
+
+            --info: #3b82f6;
+            --info-strong: #2563eb;
+        }
+
+        /* --- CSS GLOBALE & BASE --- */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        /* --- GESTIONE VISIBILITÀ SCHERMATE --- */
+        #config-screen, #history-screen, #info-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-main);
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+        
+        /* Contenitore principale del Tracker, gestito da JS */
+        #main-app-container {
+             display: none; /* Inizialmente nascosto */
+             width: 100%;
+             min-height: 100vh;
+             padding-top: 60px; /* Spazio per la NavBar */
+             background-color: var(--bg-main);
+        }
+        
+        .app {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1rem 1rem 2.5rem;
+            width: 100%;
+        }
+
+        /* --- CONFIGURAZIONE (Stili) --- */
+        #config-screen-content {
+            width: 100%;
+            max-width: 900px;
+            padding: 0 1rem;
+            padding-bottom: 90px; 
+        }
+
+        #config-screen h1 {
+            font-size: 1.6rem;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        
+        #config-screen p.description {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .config-tabs-wrapper {
+            margin-bottom: 1rem;
+            overflow-x: auto;
+            padding: 0 0.5rem 10px;
+            scroll-behavior: smooth;
+        }
+        
+        .config-tabs {
+            display: inline-flex;
+            gap: 0.5rem;
+            flex-wrap: nowrap;
+        }
+
+        .config-tabs button {
+            padding: 0.4rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid var(--border-strong);
+            background: var(--bg-soft);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .config-tabs button.active {
+            background: var(--accent);
+            border-color: var(--accent-hover);
+            color: #022c22;
+        }
+        
+        .add-day-btn {
+            height: 38px;
+            width: 38px;
+            padding: 0;
+            border-radius: 999px;
+            border: none;
+            background: var(--accent);
+            color: #022c22;
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+
+        .add-day-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .config-exercise-card {
+            background: var(--bg-elevated);
+            border-radius: 0.9rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .config-row {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+            align-items: center;
+        }
+
+        .config-row label {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-bottom: 0.2rem;
+            display: block;
+            grid-column: span 1;
+        }
+        
+        .config-row input {
+            width: 100%;
+            padding: 0.4rem 0.6rem;
+            border-radius: 0.4rem;
+            border: 1px solid var(--border-strong);
+            background: var(--bg-main);
+            color: var(--text-main);
+            font-size: 0.9rem;
+        }
+        
+        .config-reps-row {
+            margin-top: 10px;
+        }
+        
+        .config-reps-row label {
+             grid-column: span 4;
+        }
+        
+        .config-reps-row input {
+             grid-column: span 4;
+        }
+
+        .config-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .config-actions button {
+            padding: 0.5rem 0.8rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: opacity 0.2s;
+        }
+
+        .config-actions .remove-exercise {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .config-actions .remove-day {
+            background: var(--warning); 
+            color: #1f2937;
+        }
+
+        .add-exercise-btn {
+            background: #374151;
+            color: white;
+            width: 100%;
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.75rem;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .add-exercise-btn:hover {
+            background: #4b5563;
+        }
+        
+        .config-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0; 
+            width: 100%;
+            padding: 15px 0;
+            background: var(--bg-main);
+            border-top: 1px solid var(--border-subtle);
+            text-align: center;
+            z-index: 2001;
+        }
+
+        #btn-config-save {
+            background-color: var(--accent);
+            color: #022c22;
+            border: none;
+            padding: 0.8rem 2rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            box-shadow: 0 4px 15px rgba(34, 197, 94, 0.4);
+        }
+
+        #btn-config-save:hover {
+            background-color: var(--accent-hover);
+            transform: scale(1.05);
+        }
+
+        /* --- TRACKER (Stili) --- */
+        
+        .app header h1 {
+            margin: 0 0 0.25rem;
+            font-size: 1.4rem;
+        }
+
+        .app header p {
+            margin: 0;
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            margin: 1rem 0 0.5rem;
+        }
+
+        .controls label {
+            font-size: 0.85rem;
+            margin-right: 0.35rem;
+        }
+
+        .controls input[type="date"] {
+            padding: 0.3rem 0.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-strong);
+            background: var(--bg-main);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .day-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin: 0.75rem 0 0.5rem;
+        }
+
+        .day-tabs button {
+            flex: 1;
+            min-width: 3.5rem;
+            padding: 0.4rem 0.6rem;
+            border-radius: 999px;
+            border: 1px solid var(--border-strong);
+            background: var(--bg-main);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .day-tabs button.active {
+            background: var(--accent);
+            border-color: var(--accent-hover);
+            color: #022c22;
+        }
+
+        #day-title {
+            margin: 0.75rem 0 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .exercise-card {
+            background: var(--bg-card);
+            border-radius: 0.9rem;
+            padding: 0.75rem 0.9rem 0.8rem;
+            margin-bottom: 0.75rem;
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+        }
+
+        .exercise-header {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .exercise-header h3 {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .exercise-header .target {
+            margin: 0;
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+
+        .sets-header,
+        .set-row {
+            display: grid;
+            grid-template-columns: 0.6fr 1fr 1fr 1.2fr;
+            gap: 0.4rem;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+
+        .sets-header {
+            margin-top: 0.45rem;
+            padding-bottom: 0.15rem;
+            border-bottom: 1px solid var(--border-subtle);
+            font-weight: 600;
+            opacity: 0.85;
+        }
+
+        .sets-container {
+            margin-top: 0.3rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .set-row span {
+            font-size: 0.8rem;
+        }
+
+        .set-row input,
+        .set-row select {
+            width: 100%;
+            padding: 0.25rem 0.35rem;
+            border-radius: 0.4rem;
+            border: 1px solid var(--border-strong);
+            background: var(--bg-main);
+            color: var(--text-main);
+            font-size: 0.8rem;
+        }
+
+        .set-row input:focus,
+        .set-row select:focus {
+            outline: 1px solid var(--accent);
+            border-color: var(--accent);
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .actions button {
+            flex: 1;
+            padding: 0.6rem 0.8rem;
+            border-radius: 0.75rem;
+            border: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .actions .save {
+            background: var(--accent);
+            color: #022c22;
+        }
+
+        .actions .clear {
+            background: #111827;
+            color: var(--text-muted);
+        }
+
+        #save-status {
+            margin-top: 0.4rem;
+            font-size: 0.8rem;
+            min-height: 1.1em;
+        }
+
+        #save-status.ok {
+            color: var(--accent-soft);
+        }
+
+        #save-status.warn {
+            color: #facc15;
+        }
+
+
+        /* --- CSS MENU E NAVBAR CONTROLS --- */
+        .navbar {
+            background-color: transparent;
+            color: white; 
+            padding: 15px 20px;
+            display: flex;
+            justify-content: flex-end; 
+            align-items: flex-start;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            box-sizing: border-box;
+        }
+
+        .navbar-controls {
+             display: flex;
+             flex-direction: column; 
+             gap: 10px; 
+             align-items: flex-end;
+             position: relative;
+        }
+
+        .logo-menu {
+            display: none;
+        }
+        
+        .menu-icon, .timer-icon {
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: var(--bg-soft);
+            transition: background-color 0.3s ease;
+            width: 40px; 
+            height: 40px; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-decoration: none;
+            z-index: 1050; 
+        }
+
+        .menu-icon:hover, .timer-icon:hover {
+            background-color: #111827;
+        }
+        
+        .timer-icon .icon-chrono {
+             font-size: 1.2rem;
+             line-height: 1;
+        }
+
+        .menu-icon .icon-shape {
+            width: 30px;
+            height: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .menu-icon .bar {
+            width: 100%;
+            height: 3px;
+            background-color: var(--text-main);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-icon.open .bar:nth-child(1) {
+            transform: translateY(10px) rotate(45deg);
+        }
+
+        .menu-icon.open .bar:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-icon.open .bar:nth-child(3) {
+            transform: translateY(-10px) rotate(-45deg);
+        }
+
+        .nav-menu {
+            position: absolute;
+            top: calc(100% + 10px); 
+            right: 0;
+            background-color: var(--bg-elevated);
+            width: 250px; 
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+            border-bottom-left-radius: 8px;
+            z-index: 1040; 
+        }
+
+        .nav-menu.active {
+            max-height: 350px; 
+        }
+        
+        .nav-menu ul {
+            list-style: none;
+            margin: 0;
+            padding: 10px 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-menu ul li {
+            margin: 0;
+            text-align: right;
+        }
+
+        .nav-menu ul li a {
+            color: var(--text-muted);
+            text-decoration: none;
+            padding: 12px 20px;
+            display: block;
+            transition: background-color 0.3s ease;
+            cursor: pointer; 
+            font-size: 0.95rem;
+        }
+
+        .nav-menu ul li a:hover {
+            background-color: #374151;
+        }
+        
+        /* --- STILI SCHERMATA STORICO --- */
+        #history-screen {
+            padding: 0; 
+            z-index: 100; 
+        }
+        
+        .history-content {
+            width: 100%;
+            max-width: 900px;
+            padding: 0 1rem;
+            padding-top: 60px; 
+        }
+
+        .history-content header h1 {
+            margin: 0 0 0.5rem;
+            font-size: 1.8rem;
+            color: var(--accent);
+            border-bottom: 2px solid var(--border-subtle);
+            padding-bottom: 10px;
+        }
+
+        .history-content p {
+            opacity: 0.8;
+            margin-bottom: 1.5rem;
+        }
+
+        .history-section {
+            background: var(--bg-elevated);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .history-section h2 {
+            font-size: 1.2rem;
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: var(--accent-soft);
+        }
+        
+        .history-list {
+             display: flex;
+             flex-direction: column;
+             gap: 10px;
+        }
+        
+        .history-entry {
+            background: var(--bg-card);
+            padding: 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+            border-left: 4px solid var(--warning);
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+        
+        .history-entry:hover {
+            background: #0f172a;
+        }
+
+        .history-entry span.date {
+            font-weight: bold;
+            color: var(--text-muted);
+        }
+        
+        .history-entry span.day-id {
+            color: #a1a1aa;
+        }
+
+        .back-to-tracker {
+            position: fixed;
+            top: 15px;
+            left: 20px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: var(--bg-elevated);
+            transition: background-color 0.3s ease;
+            text-decoration: none;
+            color: var(--text-main);
+            font-size: 1.2rem;
+            font-weight: bold;
+            z-index: 1050;
+        }
+        .back-to-tracker:hover {
+            background-color: #374151;
+        }
+        
+        /* PULSANTI STORICO */
+        #btn-clear-all-sessions-history, #btn-export-data {
+            width: 100%;
+            padding: 0.75rem;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            margin-top: 1.5rem; 
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+        }
+        
+        #btn-export-data {
+             background: var(--info);
+             box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4);
+        }
+        
+        #btn-export-data:hover {
+             background: var(--info-strong);
+        }
+
+        #btn-clear-all-sessions-history {
+            background: var(--danger);
+            box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4);
+        }
+
+        #btn-clear-all-sessions-history:hover {
+            background: var(--danger-strong);
+        }
+        
+        /* --- SCHERMATA INFORMAZIONI PERSONALI --- */
+        #info-screen {
+            padding: 0;
+            z-index: 100;
+        }
+
+        .info-content {
+            width: 100%;
+            max-width: 900px;
+            padding: 0 1rem;
+            padding-top: 60px;
+        }
+
+        .info-content header h1 {
+            margin: 0 0 0.5rem;
+            font-size: 1.8rem;
+            color: var(--accent);
+            border-bottom: 2px solid var(--border-subtle);
+            padding-bottom: 10px;
+        }
+
+        .info-content p {
+            opacity: 0.8;
+            margin-bottom: 1.5rem;
+        }
+
+        .info-form {
+            background: var(--bg-elevated);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .info-row {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 1rem;
+        }
+
+        .info-row label {
+            font-size: 0.85rem;
+            opacity: 0.85;
+            margin-bottom: 0.25rem;
+        }
+
+        .info-row input {
+            width: 100%;
+            padding: 0.5rem 0.6rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-strong);
+            background: var(--bg-main);
+            color: var(--text-main);
+            font-size: 0.9rem;
+        }
+
+        #btn-save-info {
+            background-color: var(--accent);
+            color: #022c22;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 0.5rem;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.35);
+            transition: background-color 0.2s, transform 0.2s;
+        }
+
+        #btn-save-info:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        #info-save-status {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            min-height: 1.1em;
+        }
+
+        #info-save-status.ok {
+            color: var(--accent-soft);
+        }
+
+        #info-save-status.warn {
+            color: #facc15;
+        }
+
+        .info-note {
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+            opacity: 0.75;
+        }
+
+        /* MODAL CRONOMETRO */
+        #timer-modal {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+        }
+
+        #timer-content {
+            background-color: var(--bg-elevated);
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        
+        #timer-content h2 {
+            color: var(--accent);
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-strong);
+            padding-bottom: 10px;
+        }
+
+        #stopwatch-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--text-main);
+            margin: 20px 0;
+            background: var(--bg-main);
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .timer-controls button {
+            padding: 0.7rem 1rem;
+            margin: 5px;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        #btn-start-timer {
+            background-color: var(--accent);
+            color: #022c22;
+        }
+        
+        #btn-reset-timer {
+            background-color: #374151;
+            color: white;
+        }
+        
+        #btn-close-timer {
+            background-color: var(--bg-soft);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-strong);
+        }
+
+        /* MODAL CAMBIO TEMA */
+        #theme-modal {
+            display: none;
+            position: fixed;
+            z-index: 3001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+        }
+
+        #theme-content {
+            background-color: var(--bg-elevated);
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.6);
+        }
+
+        #theme-content h2 {
+            color: var(--accent);
+            margin-top: 0;
+            border-bottom: 1px solid var(--border-strong);
+            padding-bottom: 10px;
+        }
+
+        #theme-content p {
+            font-size: 0.9rem;
+            opacity: 0.85;
+            margin: 10px 0 16px;
+        }
+
+        .theme-options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin: 0 0 10px;
+        }
+
+        .theme-option {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 10px 10px 12px;
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.15s, transform 0.15s, background-color 0.2s;
+        }
+
+        .theme-option:hover {
+            background-color: #0f172a;
+        }
+
+        .theme-option.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .theme-option-swatch {
+            width: 100%;
+            height: 42px;
+            border-radius: 10px;
+        }
+
+        .theme-option span {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        .theme-swatch-default {
+            background: linear-gradient(135deg, #020617 0%, #111827 60%, #22c55e 100%);
+        }
+
+        .theme-swatch-ocean {
+            background: linear-gradient(135deg, #011627 0%, #022c3a 50%, #0ea5e9 100%);
+        }
+
+        .theme-swatch-sunset {
+            background: linear-gradient(135deg, #17101f 0%, #2a162c 50%, #f97316 100%);
+        }
+
+        .theme-swatch-violet {
+            background: linear-gradient(135deg, #120622 0%, #1f102f 50%, #a855f7 100%);
+        }
+
+        #btn-close-theme {
+            margin-top: 16px;
+            background-color: var(--bg-soft);
+            color: var(--text-main);
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-strong);
+            padding: 0.5rem 1.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        #btn-close-theme:hover {
+            background-color: #1f2937;
+        }
+        
+        /*
+        ====================================================
+        OTTIMIZZAZIONE PER SCHERMI PICCOLI
+        ====================================================
+        */
+
+        @media (max-width: 600px) {
+            .app, #config-screen-content, .history-content, .info-content {
+                padding: 0 0.75rem;
+            }
+
+            .sets-header,
+            .set-row {
+                grid-template-columns: 0.4fr 1.2fr 1.2fr 1.5fr; 
+                gap: 0.25rem;
+                font-size: 0.75rem;
+            }
+            
+            .set-row input,
+            .set-row select {
+                padding: 0.2rem 0.3rem;
+                font-size: 0.75rem; 
+            }
+            
+            .exercise-header h3 {
+                font-size: 0.95rem;
+            }
+
+            .actions button {
+                padding: 0.5rem 0.6rem;
+                font-size: 0.85rem;
+            }
+            
+            .config-row {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+                margin-bottom: 1rem;
+            }
+            
+            .config-exercise-card > .config-row:nth-child(2) {
+                 grid-template-columns: repeat(3, 1fr) auto;
+            }
+
+            .config-reps-row label, .config-reps-row input {
+                grid-column: span 4 !important;
+            }
+            
+            .config-row.config-reps-row:first-child input {
+                grid-column: span 3 !important;
+            }
+            .config-row.config-reps-row:first-child .remove-day {
+                grid-column: span 1;
+                margin-top: 0;
+                min-width: 60px;
+                height: 38px;
+            }
+            
+            .config-actions {
+                 grid-column: span 4; 
+                 margin-top: 0;
+            }
+            
+            #btn-config-save {
+                font-size: 1rem;
+                padding: 0.7rem 1.5rem;
+            }
+            
+            .history-section {
+                 padding: 1rem;
+            }
+            
+            .history-entry {
+                 font-size: 0.9rem;
+            }
+            
+            .day-tabs {
+                justify-content: space-between;
+                gap: 0.4rem;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- MODAL CRONOMETRO -->
+    <div id="timer-modal">
+        <div id="timer-content">
+            <h2>⏱️ Cronometro e Timer</h2>
+            <p>Usa il cronometro per tracciare i tempi di recupero tra le serie.</p>
+            
+            <div class="timer-controls">
+                <p id="stopwatch-display">00:00.00</p>
+                <button id="btn-start-timer">Avvia Cronometro</button>
+                <button id="btn-reset-timer">Reset</button>
+            </div>
+            
+            <button id="btn-close-timer" style="margin-top: 20px;">Chiudi</button>
+        </div>
+    </div>
+
+    <!-- MODAL CAMBIO TEMA -->
+    <div id="theme-modal">
+        <div id="theme-content">
+            <h2>🎨 Cambia Tema</h2>
+            <p>Scegli come vuoi vedere il tuo Workout Tracker.</p>
+
+            <div class="theme-options-grid">
+                <button class="theme-option" data-theme="default">
+                    <div class="theme-option-swatch theme-swatch-default"></div>
+                    <span>Tema base</span>
+                </button>
+                <button class="theme-option" data-theme="ocean">
+                    <div class="theme-option-swatch theme-swatch-ocean"></div>
+                    <span>Ocean</span>
+                </button>
+                <button class="theme-option" data-theme="sunset">
+                    <div class="theme-option-swatch theme-swatch-sunset"></div>
+                    <span>Tramonto</span>
+                </button>
+                <button class="theme-option" data-theme="violet">
+                    <div class="theme-option-swatch theme-swatch-violet"></div>
+                    <span>Viola</span>
+                </button>
+            </div>
+
+            <button id="btn-close-theme">Chiudi</button>
+        </div>
+    </div>
+
+
+    <div id="history-screen">
+        <a href="#" class="back-to-tracker" id="btn-back-to-tracker" title="Torna al Tracker">
+            &larr; Torna al Tracker
+        </a>
+        <div class="history-content">
+            <header>
+                <h1>Storico Allenamenti</h1>
+            </header>
+            <p>Tutte le sessioni completate e salvate.</p>
+
+            <div id="history-container">
+                <div class="history-section">
+                    <h2>Cronologia:</h2>
+                    <div class="history-list" id="all-sessions-list">
+                        <p style="text-align: center; opacity: 0.7; padding: 15px 0;">Caricamento storico in corso...</p>
+                    </div>
+                </div>
+                
+                <button type="button" id="btn-export-data">📄 Esporta Dati Allenamenti (.txt)</button>
+
+                <button type="button" id="btn-clear-all-sessions-history">🗑️ Cancella Tutti i Salvataggi</button>
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- SCHERMATA INFORMAZIONI PERSONALI -->
+    <div id="info-screen">
+        <a href="#" class="back-to-tracker" id="btn-info-back" title="Torna al Tracker">
+            &larr; Torna al Tracker
+        </a>
+        <div class="info-content">
+            <header>
+                <h1>Informazioni Personali</h1>
+            </header>
+            <p>Compila i tuoi dati personali. Verranno salvati solo in questo browser.</p>
+
+            <div class="info-form">
+                <div class="info-row">
+                    <label for="info-first-name">Nome</label>
+                    <input type="text" id="info-first-name" autocomplete="given-name" placeholder="Es. Giorgio">
+                </div>
+                <div class="info-row">
+                    <label for="info-last-name">Cognome</label>
+                    <input type="text" id="info-last-name" autocomplete="family-name" placeholder="Es. Rossi">
+                </div>
+                <div class="info-row">
+                    <label for="info-weight">Peso (kg)</label>
+                    <input type="number" id="info-weight" min="0" step="0.1" inputmode="decimal" placeholder="Es. 78.5">
+                </div>
+                <div class="info-row">
+                    <label for="info-gym">Palestra dove ti alleni</label>
+                    <input type="text" id="info-gym" placeholder="Nome della palestra">
+                </div>
+
+                <button type="button" id="btn-save-info">Salva Dati Personali</button>
+                <div id="info-save-status"></div>
+                <p class="info-note">
+                    I dati sono salvati in locale tramite <code>localStorage</code> e non vengono inviati a nessun server.
+                </p>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="config-screen">
+        <div id="config-screen-content">
+            <h1>Workout Tracker Configurazione Scheda</h1>
+            <p class="description">Definisci gli esercizi e i carichi di base per ogni allenamento. Premi Salva per iniziare.</p>
+
+            <div class="config-tabs-wrapper">
+                <div class="config-tabs" id="config-tabs"></div>
+            </div>
+
+            <div id="config-day-content"></div>
+            
+        </div>
+        
+        <div class="config-footer">
+            <button id="btn-config-save">Salva e Avvia Tracker</button>
+        </div>
+    </div>
+
+    <div id="main-app-container">
+        
+        <header class="navbar">
+            <div class="navbar-controls">
+                
+                <div class="menu-icon" id="menuIcon">
+                    <div class="icon-shape">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+                </div>
+                
+                <div class="timer-icon" id="timerIcon" title="Apri Cronometro/Timer">
+                    <span class="icon-chrono">⏱️</span>
+                </div>
+                
+                <nav class="nav-menu" id="navMenu">
+                    <ul>
+                        <li><a id="link-show-history">Storico Allenamenti</a></li> 
+                        <li><a href="#" id="link-modify-workout">Modifica Workout</a></li>
+                        <li><a href="#" id="reset-program-link">Reset Scheda</a></li>
+                        <li><a href="#" id="link-theme">Cambia Tema</a></li>
+                        <li><a href="#" id="link-info">Informazioni</a></li>
+                    </ul>
+                </nav>
+            </div>
+        </header>
+
+        <div class="app">
+            <header>
+                <h1>Workout Tracker</h1>
+                <p>Versione prova in HTML – allenamenti A/B/C/D</p>
+            </header>
+
+            <div class="controls">
+                <div class="date-wrapper">
+                    <label for="date">Data:</label>
+                    <input type="date" id="date">
+                </div>
+            </div>
+
+            <div class="day-tabs" id="app-day-tabs"></div>
+
+            <h2 id="day-title"></h2>
+
+            <section id="exercises"></section>
+
+            <div class="actions">
+                <button type="button" id="btn-save" class="save">💾 Salva allenamento</button>
+                <button type="button" id="btn-clear" class="clear">🗑 Cancella salvataggio</button>
+            </div>
+            <div id="save-status"></div>
+        </div>
+    </div>
+
+
+    <script>
+        const ALPHABET = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+        const MAX_DAYS = 7; // Allenamenti consentiti: A–G
+
+        const defaultProgramConfig = {
+            A: {
+                name: "Allenamento A – Dorso",
+                exercises: [
+                    { id: "ex1_A", name: "Trazioni", sets: 4, repsTarget: "8", defaultWeight: 46 },
+                    { id: "ex2_A", name: "Hyperextension", sets: 4, repsTarget: "10", defaultWeight: 0 },
+                    { id: "ex3_A", name: "Rematore T-Bar", sets: 3, repsTarget: "8-10-12", defaultWeight: 26 }
+                ]
+            },
+            B: {
+                name: "Allenamento B – Petto & Spalle",
+                exercises: [
+                    { id: "ex1_B", name: "Panca piana bilanciere", sets: 5, repsTarget: "5", defaultWeight: 13 },
+                    { id: "ex2_B", name: "Military press", sets: 5, repsTarget: "5", defaultWeight: 0 },
+                    { id: "ex3_B", name: "Alzate frontali disco", sets: 4, repsTarget: "10", defaultWeight: 10 }
+                ]
+            },
+            C: {
+                name: "Allenamento C – Gambe",
+                exercises: [
+                    { id: "ex1_C", name: "Affondi camminati", sets: 5, repsTarget: "10", defaultWeight: 7 },
+                    { id: "ex2_C", name: "Leg press", sets: 4, repsTarget: "12", defaultWeight: 41 },
+                    { id: "ex3_C", name: "Hip thrust", sets: 3, repsTarget: "10", defaultWeight: 20 }
+                ]
+            }
+        };
+        
+        let currentDayIdConfig = 'A';
+        let currentDayIdTracker = 'A';
+        let program = {}; 
+
+        // --- VARIABILI CRONOMETRO ---
+        let startTime = 0;
+        let elapsedTime = 0;
+        let timerInterval = null;
+        let isRunning = false;
+        
+        const stopwatchDisplay = document.getElementById('stopwatch-display');
+        const startButton = document.getElementById('btn-start-timer');
+
+        // --- TEMA: CONFIGURAZIONE PREDEFINITA ---
+        const AVAILABLE_THEMES = {
+            default: {
+                bgMain: '#020617',
+                bgElevated: '#111827',
+                bgCard: '#020617',
+                accent: '#22c55e',
+                accentHover: '#16a34a',
+                accentSoft: '#4ade80'
+            },
+            ocean: {
+                bgMain: '#011627',
+                bgElevated: '#022c3a',
+                bgCard: '#02131f',
+                accent: '#0ea5e9',
+                accentHover: '#0284c7',
+                accentSoft: '#7dd3fc'
+            },
+            sunset: {
+                bgMain: '#17101f',
+                bgElevated: '#2a162c',
+                bgCard: '#1f1022',
+                accent: '#f97316',
+                accentHover: '#ea580c',
+                accentSoft: '#fed7aa'
+            },
+            violet: {
+                bgMain: '#120622',
+                bgElevated: '#1f102f',
+                bgCard: '#140826',
+                accent: '#a855f7',
+                accentHover: '#7c3aed',
+                accentSoft: '#e9d5ff'
+            }
+        };
+
+        function applyTheme(themeName) {
+            const theme = AVAILABLE_THEMES[themeName] || AVAILABLE_THEMES['default'];
+            const root = document.documentElement;
+            root.style.setProperty('--bg-main', theme.bgMain);
+            root.style.setProperty('--bg-elevated', theme.bgElevated);
+            root.style.setProperty('--bg-card', theme.bgCard);
+            root.style.setProperty('--accent', theme.accent);
+            root.style.setProperty('--accent-hover', theme.accentHover);
+            root.style.setProperty('--accent-soft', theme.accentSoft);
+            localStorage.setItem('workout-theme', themeName);
+        }
+
+        function highlightThemeOption(themeName) {
+            const options = document.querySelectorAll('.theme-option');
+            options.forEach(opt => {
+                if (opt.dataset.theme === themeName) {
+                    opt.classList.add('active');
+                } else {
+                    opt.classList.remove('active');
+                }
+            });
+        }
+
+        function loadTheme() {
+            const saved = localStorage.getItem('workout-theme') || 'default';
+            applyTheme(saved);
+            highlightThemeOption(saved);
+        }
+
+        function openThemeModal() {
+            const modal = document.getElementById('theme-modal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeThemeModal() {
+            const modal = document.getElementById('theme-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        // --- FUNZIONI SCHERMATE ---
+        function switchScreen(screenId) {
+            document.getElementById('config-screen').style.display = 'none';
+            document.getElementById('main-app-container').style.display = 'none';
+            document.getElementById('history-screen').style.display = 'none';
+            document.getElementById('info-screen').style.display = 'none';
+            
+            if (screenId === 'config') {
+                 document.getElementById('config-screen').style.display = 'flex';
+            } else if (screenId === 'tracker') {
+                 document.getElementById('main-app-container').style.display = 'block';
+                 initWorkoutTracker();
+            } else if (screenId === 'history') {
+                 document.getElementById('history-screen').style.display = 'flex';
+                 renderHistory();
+            } else if (screenId === 'info') {
+                 document.getElementById('info-screen').style.display = 'flex';
+                 loadUserInfo();
+            }
+            
+            const navMenu = document.getElementById('navMenu');
+            const menuIcon = document.getElementById('menuIcon');
+            if (navMenu) navMenu.classList.remove('active');
+            if (menuIcon) menuIcon.classList.remove('open');
+        }
+
+        // --- CRONOMETRO ---
+        function formatTime(time) {
+            const date = new Date(time);
+            const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+            const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+            const milliseconds = String(Math.floor(date.getUTCMilliseconds() / 10)).padStart(2, '0');
+            return `${minutes}:${seconds}.${milliseconds}`;
+        }
+
+        function updateStopwatch() {
+            elapsedTime = Date.now() - startTime;
+            if (stopwatchDisplay) {
+                stopwatchDisplay.textContent = formatTime(elapsedTime);
+            }
+        }
+
+        function startStopwatch() {
+            if (!isRunning) {
+                startTime = Date.now() - elapsedTime;
+                timerInterval = setInterval(updateStopwatch, 10);
+                isRunning = true;
+                startButton.textContent = 'Pausa Cronometro';
+                startButton.style.backgroundColor = '#f59e0b'; 
+                startButton.style.color = '#1f2937';
+            } else {
+                clearInterval(timerInterval);
+                isRunning = false;
+                startButton.textContent = 'Riprendi Cronometro';
+                startButton.style.backgroundColor = '#3b82f6'; 
+                startButton.style.color = 'white';
+            }
+        }
+
+        function resetStopwatch() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            elapsedTime = 0;
+            if (stopwatchDisplay) {
+                stopwatchDisplay.textContent = '00:00.00';
+            }
+            startButton.textContent = 'Avvia Cronometro';
+            startButton.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--accent') || '#22c55e'; 
+            startButton.style.color = '#022c22';
+        }
+
+        // --- DATI & UTILITY ---
+        function initConfigScreen() {
+             const rawConfig = localStorage.getItem('workout-program-config');
+             if (!rawConfig) {
+                 localStorage.setItem('workout-program-config', JSON.stringify(defaultProgramConfig));
+             }
+             
+             const configKeys = Object.keys(getSavedConfig().rawObject).sort();
+             currentDayIdConfig = configKeys[0] || 'A';
+             
+             renderConfigTabs();
+             renderConfigContent();
+             
+             switchScreen('config');
+        }
+
+        function resetProgram() {
+            if (confirm("ATTENZIONE! Vuoi davvero resettare la configurazione della scheda (Allenamento A, B, C...)? I tuoi dati degli allenamenti passati non verranno cancellati.")) {
+                localStorage.removeItem('workout-program-config');
+                initConfigScreen(); 
+                alert("Scheda resettata con successo. Sei stato reindirizzato alla configurazione.");
+            }
+        }
+        
+        function clearAllSavedSessions() {
+             const allKeys = Object.keys(localStorage);
+             const sessionKeys = allKeys.filter(
+                 key => key.startsWith('workout-') &&
+                        key !== 'workout-program-config' &&
+                        key !== 'workout-user-info'
+             );
+             
+             if (sessionKeys.length === 0) {
+                 alert("Non ci sono salvataggi di allenamenti da cancellare.");
+                 return;
+             }
+
+             if (confirm(`Sei sicuro di voler cancellare TUTTI i ${sessionKeys.length} salvataggi degli allenamenti (sessioni completate) mantenendo la configurazione e i dati personali? Questa azione è irreversibile!`)) {
+                 let deletedCount = 0;
+                 sessionKeys.forEach(key => {
+                     localStorage.removeItem(key);
+                     deletedCount++;
+                 });
+                 
+                 alert(`Cancellati con successo ${deletedCount} salvataggi di allenamenti.`);
+                 switchScreen('history'); 
+                 
+                 const trackerContainer = document.getElementById('main-app-container');
+                 if (trackerContainer && trackerContainer.style.display !== 'none') {
+                     renderDay(currentDayIdTracker);
+                 }
+             }
+        }
+
+        function getSavedConfig() {
+            const raw = localStorage.getItem('workout-program-config');
+            let rawConfigObject = defaultProgramConfig;
+
+            if (raw) {
+                try {
+                    rawConfigObject = JSON.parse(raw);
+                } catch (e) {
+                    console.error("Errore parsing configurazione salvata, uso i default.", e);
+                }
+            }
+            
+            const configArray = Object.keys(rawConfigObject).map(key => ({
+                id: key,
+                name: rawConfigObject[key].name,
+                exercises: rawConfigObject[key].exercises
+            }));
+            
+            return { days: configArray, rawObject: rawConfigObject };
+        }
+        
+        function getNextDayId(currentDayIds) {
+            const used = new Set(currentDayIds);
+            for (let i = 0; i < MAX_DAYS; i++) {
+                const letter = ALPHABET[i];
+                if (!used.has(letter)) {
+                    return letter;
+                }
+            }
+            return null;
+        }
+        
+        function todayISO() {
+            const now = new Date();
+            const offset = now.getTimezoneOffset();
+            const local = new Date(now.getTime() - offset * 60000);
+            return local.toISOString().slice(0, 10);
+        }
+
+        function getSelectedDate() {
+            const input = document.getElementById("date");
+            if (!input) return todayISO();
+            return input.value || todayISO();
+        }
+
+        function getSession(date, dayId) {
+            const key = "workout-" + date + "-" + dayId;
+            const raw = localStorage.getItem(key);
+            if (!raw) return null;
+            try {
+                return JSON.parse(raw);
+            } catch (e) {
+                console.error("Errore parsing sessione", e);
+                return null;
+            }
+        }
+        
+        function getDayNameFromConfig(dayId) {
+            const rawConfig = localStorage.getItem('workout-program-config');
+            if (!rawConfig) return `Allenamento ${dayId}`;
+            
+            try {
+                const config = JSON.parse(rawConfig);
+                return config[dayId] ? config[dayId].name : `Allenamento ${dayId}`;
+            } catch (e) {
+                return `Allenamento ${dayId}`;
+            }
+        }
+
+        // --- DATI PERSONALI (INFO) ---
+        function setInfoSaveStatus(message, type) {
+            const el = document.getElementById('info-save-status');
+            if (!el) return;
+            el.textContent = message || '';
+            el.classList.remove('ok', 'warn');
+            if (type === 'ok') el.classList.add('ok');
+            if (type === 'warn') el.classList.add('warn');
+        }
+
+        function loadUserInfo() {
+            const raw = localStorage.getItem('workout-user-info');
+            const firstNameInput = document.getElementById('info-first-name');
+            const lastNameInput  = document.getElementById('info-last-name');
+            const weightInput    = document.getElementById('info-weight');
+            const gymInput       = document.getElementById('info-gym');
+
+            setInfoSaveStatus('', null);
+
+            if (!raw) {
+                if (firstNameInput) firstNameInput.value = '';
+                if (lastNameInput)  lastNameInput.value  = '';
+                if (weightInput)    weightInput.value    = '';
+                if (gymInput)       gymInput.value       = '';
+                return;
+            }
+
+            try {
+                const info = JSON.parse(raw) || {};
+                if (firstNameInput) firstNameInput.value = info.firstName || '';
+                if (lastNameInput)  lastNameInput.value  = info.lastName || '';
+                if (weightInput)    weightInput.value    = info.weightKg != null ? info.weightKg : '';
+                if (gymInput)       gymInput.value       = info.gymName || '';
+            } catch (e) {
+                console.error("Errore nel parsing dei dati personali:", e);
+                setInfoSaveStatus("Errore nel caricamento dei dati personali.", "warn");
+            }
+        }
+
+        function saveUserInfo() {
+            const firstNameInput = document.getElementById('info-first-name');
+            const lastNameInput  = document.getElementById('info-last-name');
+            const weightInput    = document.getElementById('info-weight');
+            const gymInput       = document.getElementById('info-gym');
+
+            const info = {
+                firstName: firstNameInput ? firstNameInput.value.trim() : '',
+                lastName:  lastNameInput  ? lastNameInput.value.trim()  : '',
+                weightKg:  weightInput    ? (weightInput.value ? Number(weightInput.value) : '') : '',
+                gymName:   gymInput       ? gymInput.value.trim()       : ''
+            };
+
+            try {
+                localStorage.setItem('workout-user-info', JSON.stringify(info));
+                setInfoSaveStatus("Dati personali salvati ✅", "ok");
+            } catch (e) {
+                console.error("Errore salvataggio dati personali:", e);
+                setInfoSaveStatus("Errore nel salvataggio dei dati personali.", "warn");
+            }
+        }
+
+        // --- CONFIGURAZIONE ---
+        function addDay() {
+            saveConfigFromDOM(false);
+
+            const configResult = getSavedConfig();
+            const currentConfig = configResult.rawObject;
+            const existingIds = Object.keys(currentConfig).filter(id => id.length === 1); 
+
+            const nextId = getNextDayId(existingIds);
+
+            if (!nextId) {
+                alert(`Hai raggiunto il limite massimo di ${MAX_DAYS} allenamenti (${ALPHABET.slice(0, MAX_DAYS).join(', ')}).`);
+                return;
+            }
+
+            currentConfig[nextId] = {
+                name: `Allenamento ${nextId} - Nuovo`,
+                exercises: [
+                    { id: `ex${Date.now()}_${nextId}`, name: 'Nuovo Esercizio', sets: 3, repsTarget: '10', defaultWeight: 0 }
+                ]
+            };
+            
+            localStorage.setItem('workout-program-config', JSON.stringify(currentConfig));
+            
+            currentDayIdConfig = nextId;
+            
+            renderConfigTabs();
+            renderConfigContent();
+        }
+        
+        function removeDay(dayId) {
+            if (!confirm(`Sei sicuro di voler eliminare completamente l'Allenamento ${dayId}? Questa azione è irreversibile!`)) {
+                return;
+            }
+            
+            const currentConfig = getSavedConfig().rawObject;
+            delete currentConfig[dayId];
+
+            const remainingDays = Object.keys(currentConfig).sort();
+
+            if (remainingDays.length === 0) {
+                alert("Non puoi eliminare l'ultimo allenamento rimasto. Aggiungi un nuovo allenamento prima di eliminarlo.");
+                localStorage.setItem('workout-program-config', JSON.stringify(defaultProgramConfig));
+                currentDayIdConfig = 'A';
+            } else {
+                currentDayIdConfig = remainingDays[0];
+                localStorage.setItem('workout-program-config', JSON.stringify(currentConfig));
+            }
+            
+            renderConfigTabs();
+            renderConfigContent();
+        }
+
+        function renderConfigTabs() {
+            const tabContainer = document.getElementById('config-tabs');
+            tabContainer.innerHTML = '';
+
+            const config = getSavedConfig().rawObject;
+            const daysToRender = Object.keys(config).sort(); 
+            
+            if (!daysToRender.includes(currentDayIdConfig)) {
+                currentDayIdConfig = daysToRender[0] || 'A';
+            }
+            
+            daysToRender.forEach(dayId => {
+                const button = document.createElement('button');
+                button.textContent = `Allenamento ${dayId}`;
+                button.dataset.dayId = dayId;
+                
+                if (dayId === currentDayIdConfig) {
+                    button.classList.add('active');
+                }
+                
+                button.addEventListener('click', () => {
+                    saveConfigFromDOM(false); 
+                    currentDayIdConfig = dayId;
+                    renderConfigTabs();
+                    renderConfigContent();
+                });
+                tabContainer.appendChild(button);
+            });
+
+            const addBtn = document.createElement('button');
+            addBtn.id = 'add-day-btn';
+            addBtn.className = 'add-day-btn';
+            addBtn.type = 'button';
+            addBtn.textContent = '+';
+            addBtn.addEventListener('click', addDay);
+            tabContainer.appendChild(addBtn);
+        }
+
+        function renderConfigContent() {
+            const contentContainer = document.getElementById('config-day-content');
+            contentContainer.innerHTML = '';
+            
+            const config = getSavedConfig().rawObject;
+            const currentDay = config[currentDayIdConfig];
+
+            if (!currentDay) {
+                 contentContainer.innerHTML = "<p style='text-align:center; opacity:0.7; padding-top:20px;'>Nessun allenamento configurato. Usa il tasto '+' per aggiungere l'Allenamento A.</p>";
+                 return;
+            }
+
+            const dayNameDiv = document.createElement('div');
+            dayNameDiv.style.marginBottom = '1.5rem';
+            dayNameDiv.innerHTML = `
+                <div class="config-row config-reps-row">
+                    <label for="day-name-${currentDayIdConfig}">Nome Allenamento (es. Allenamento ${currentDayIdConfig} - Dorso)</label>
+                    <input type="text" id="${currentDayIdConfig}-name-input" data-field="dayName" value="${currentDay.name || ''}" placeholder="Nome Allenamento" style="grid-column: span 3; margin-right: 10px;">
+                    <button class="remove-day" onclick="removeDay('${currentDayIdConfig}')" style="grid-column: span 1; margin-top: 0; min-width: 60px;">Elimina</button>
+                </div>
+            `;
+            contentContainer.appendChild(dayNameDiv);
+
+            currentDay.exercises.forEach(exercise => {
+                contentContainer.appendChild(createExerciseCard(exercise, currentDayIdConfig));
+            });
+            
+            const addBtn = document.createElement('button');
+            addBtn.className = 'add-exercise-btn';
+            addBtn.textContent = '+ Aggiungi Nuovo Esercizio';
+            addBtn.addEventListener('click', () => addExercise(currentDayIdConfig));
+            contentContainer.appendChild(addBtn);
+        }
+        
+        function createExerciseCard(exercise, dayId) {
+            const card = document.createElement('div');
+            card.className = 'config-exercise-card';
+            card.dataset.exerciseId = exercise.id;
+
+            const nameRow = document.createElement('div');
+            nameRow.className = 'config-row config-reps-row';
+            nameRow.innerHTML = `
+                <label for="${exercise.id}-name">Nome Esercizio</label>
+                <input type="text" id="${exercise.id}-name" data-field="name" value="${exercise.name || ''}" placeholder="Nome Esercizio" style="grid-column: span 4;">
+            `;
+            card.appendChild(nameRow);
+            
+            const detailsRow = document.createElement('div');
+            detailsRow.className = 'config-row';
+            detailsRow.innerHTML = `
+                <div>
+                    <label for="${exercise.id}-sets">Serie</label>
+                    <input type="number" id="${exercise.id}-sets" data-field="sets" value="${exercise.sets || 0}" min="1">
+                </div>
+                
+                <div>
+                    <label for="${exercise.id}-reps">Ripetizioni (Target)</label>
+                    <input type="text" id="${exercise.id}-reps" data-field="repsTarget" value="${exercise.repsTarget || ''}" placeholder="es: 10, 8-10">
+                </div>
+                
+                <div>
+                    <label for="${exercise.id}-weight">Peso Iniziale (kg)</label>
+                    <input type="number" id="${exercise.id}-weight" data-field="defaultWeight" value="${exercise.defaultWeight || 0}" step="0.5" min="0">
+                </div>
+                
+                <div class="config-actions" style="grid-column: span 1; margin-top: 1.5rem;">
+                    <button class="remove-exercise" onclick="removeExercise('${dayId}', '${exercise.id}')">Elimina</button>
+                </div>
+            `;
+            card.appendChild(detailsRow);
+            
+            return card;
+        }
+
+        function addExercise(dayId) {
+            saveConfigFromDOM(false); 
+            
+            const currentConfig = getSavedConfig().rawObject;
+            const newId = `ex${Date.now()}_${dayId}`;
+            const newExercise = {
+                id: newId,
+                name: 'NUOVO ESERCIZIO',
+                sets: 3,
+                repsTarget: '10',
+                defaultWeight: 10
+            };
+            
+            if (currentConfig[dayId]) {
+                currentConfig[dayId].exercises.push(newExercise);
+            } else {
+                currentConfig[dayId] = { name: `Allenamento ${dayId}`, exercises: [newExercise] };
+            }
+
+            localStorage.setItem('workout-program-config', JSON.stringify(currentConfig));
+            renderConfigContent(); 
+        }
+
+        function removeExercise(dayId, exerciseId) {
+            if (!confirm(`Sei sicuro di voler eliminare l'esercizio?`)) {
+                 return;
+            }
+            const currentConfig = getSavedConfig().rawObject;
+            
+            if (currentConfig[dayId] && currentConfig[dayId].exercises) {
+                currentConfig[dayId].exercises = currentConfig[dayId].exercises.filter(ex => ex.id !== exerciseId);
+                localStorage.setItem('workout-program-config', JSON.stringify(currentConfig));
+                renderConfigContent(); 
+            }
+        }
+        
+        function saveConfigFromDOM(isFinalSave = true) {
+            const configCards = document.querySelectorAll('#config-day-content .config-exercise-card');
+            let newConfig = getSavedConfig().rawObject;
+            
+            const dayNameInput = document.getElementById(`${currentDayIdConfig}-name-input`);
+            if (dayNameInput && newConfig[currentDayIdConfig]) {
+                newConfig[currentDayIdConfig].name = dayNameInput.value;
+            }
+            
+            if (newConfig[currentDayIdConfig]) {
+                 newConfig[currentDayIdConfig].exercises = [];
+            }
+
+            configCards.forEach(card => {
+                const dayId = card.dataset.exerciseId.split('_').pop();
+                if (dayId !== currentDayIdConfig) return; 
+                
+                const exerciseId = card.dataset.exerciseId;
+                
+                const name = card.querySelector('[data-field="name"]').value;
+                const sets = parseInt(card.querySelector('[data-field="sets"]').value) || 0;
+                const repsTarget = card.querySelector('[data-field="repsTarget"]').value;
+                const defaultWeight = parseFloat(card.querySelector('[data-field="defaultWeight"]').value) || 0;
+
+                if (name && sets > 0) {
+                    newConfig[currentDayIdConfig].exercises.push({
+                        id: exerciseId,
+                        name: name,
+                        sets: sets,
+                        repsTarget: repsTarget,
+                        defaultWeight: defaultWeight
+                    });
+                }
+            });
+            
+            localStorage.setItem('workout-program-config', JSON.stringify(newConfig));
+
+            if (isFinalSave) {
+                 switchScreen('tracker');
+            }
+        }
+        
+        function saveAndStartApp() {
+             saveConfigFromDOM(true);
+        }
+
+        // --- TRACKER ---
+        function initWorkoutTracker() {
+            const configResult = getSavedConfig();
+            program.days = configResult.days;
+            
+            renderAppTabs();
+            
+            const configuredDays = program.days.map(d => d.id);
+            if (!configuredDays.includes(currentDayIdTracker)) {
+                currentDayIdTracker = configuredDays[0] || 'A';
+            }
+            
+            const dateInput = document.getElementById("date");
+            if (dateInput && !dateInput.value) {
+                 dateInput.value = todayISO();
+            }
+            
+            renderDay(currentDayIdTracker);
+        }
+
+        function renderAppTabs() {
+            const tabContainer = document.getElementById('app-day-tabs');
+            tabContainer.innerHTML = '';
+            
+            program.days.forEach(day => {
+                const button = document.createElement('button');
+                button.textContent = `Allenamento ${day.id}`;
+                button.dataset.dayId = day.id;
+                
+                if (day.id === currentDayIdTracker) {
+                    button.classList.add('active');
+                }
+                
+                button.addEventListener('click', function () {
+                    const dayId = this.dataset.dayId;
+                    currentDayIdTracker = dayId;
+                    renderAppTabs(); 
+                    renderDay(dayId);
+                });
+                tabContainer.appendChild(button);
+            });
+        }
+
+        function getSavedSetFromSession(session, exerciseId, setNumber) {
+            if (!session || !session.exercises) return null;
+            const list = session.exercises[exerciseId];
+            if (!list) return null;
+            for (let i = 0; i < list.length; i++) {
+                if (list[i].set === setNumber) {
+                    return list[i];
+                }
+            }
+            return null;
+        }
+
+        function showSaveStatus(message, type) {
+            const el = document.getElementById("save-status");
+            el.textContent = message || "";
+            el.classList.remove("ok");
+            el.classList.remove("warn");
+            if (type === "ok") el.classList.add("ok");
+            if (type === "warn") el.classList.add("warn");
+        }
+
+        function updateSaveStatusFromSession(date, dayId) {
+            const s = getSession(date, dayId);
+            if (s) {
+                showSaveStatus("Caricata sessione salvata per questo allenamento/data.", "ok");
+            } else {
+                showSaveStatus("Nessun salvataggio per questo allenamento/data.", "warn");
+            }
+        }
+        
+        function renderDay(dayId) {
+            currentDayIdTracker = dayId;
+            const date = getSelectedDate();
+            const day = program.days.find(function (d) { return d.id === dayId; });
+            if (!day) return;
+            const session = getSession(date, dayId);
+
+            const titleEl = document.getElementById("day-title");
+            titleEl.textContent = day.name + " (" + date + ")";
+
+            const container = document.getElementById("exercises");
+            container.innerHTML = "";
+
+            day.exercises.forEach(function (ex) {
+                const card = document.createElement("div");
+                card.className = "exercise-card";
+
+                const header = document.createElement("div");
+                header.className = "exercise-header";
+
+                const h3 = document.createElement("h3");
+                h3.textContent = ex.name;
+
+                const small = document.createElement("p");
+                small.className = "target";
+                small.textContent = "Target: " + ex.sets + " set x " + ex.repsTarget;
+
+                header.appendChild(h3);
+                header.appendChild(small);
+                card.appendChild(header);
+
+                const setsHeader = document.createElement("div");
+                setsHeader.className = "sets-header";
+                setsHeader.innerHTML = "<span>Set</span><span>Peso (kg)</span><span>Reps</span><span>Nota</span>";
+                card.appendChild(setsHeader);
+
+                const setsContainer = document.createElement("div");
+                setsContainer.className = "sets-container";
+
+                for (let i = 1; i <= ex.sets; i++) {
+                    const row = document.createElement("div");
+                    row.className = "set-row";
+                    row.dataset.exerciseId = ex.id;
+                    row.dataset.setNumber = String(i);
+
+                    const saved = getSavedSetFromSession(session, ex.id, i);
+
+                    const colSet = document.createElement("span");
+                    colSet.textContent = String(i);
+
+                    const inputWeight = document.createElement("input");
+                    inputWeight.type = "number";
+                    inputWeight.step = "0.5";
+                    inputWeight.inputMode = "decimal";
+                    inputWeight.className = "input-weight";
+                    if (saved && typeof saved.peso === "number" && saved.peso > 0) {
+                        inputWeight.value = String(saved.peso);
+                    } else if (i === 1 && ex.defaultWeight) {
+                        inputWeight.value = String(ex.defaultWeight);
+                    }
+
+                    const inputReps = document.createElement("input");
+                    inputReps.type = "number";
+                    inputReps.inputMode = "numeric";
+                    inputReps.className = "input-reps";
+                    if (saved && typeof saved.reps === "number" && saved.reps > 0) {
+                        inputReps.value = String(saved.reps);
+                    }
+
+                    const selectNote = document.createElement("select");
+                    selectNote.className = "input-note";
+                    const options = [
+                        { value: "", label: "-" },
+                        { value: "facile", label: "Facile" },
+                        { value: "ok", label: "OK" },
+                        { value: "fatica", label: "Fatica" },
+                        { value: "aumentare", label: "Aumentare" },
+                        { value: "meno", label: "Meno carico" }
+                    ];
+                    options.forEach(function (opt) {
+                        const o = document.createElement("option");
+                        o.value = opt.value;
+                        o.textContent = opt.label;
+                        if (saved && saved.nota === opt.value) {
+                            o.selected = true;
+                        }
+                        selectNote.appendChild(o);
+                    });
+
+                    row.appendChild(colSet);
+                    row.appendChild(inputWeight);
+                    row.appendChild(inputReps);
+                    row.appendChild(selectNote);
+
+                    setsContainer.appendChild(row);
+                }
+
+                card.appendChild(setsContainer);
+                container.appendChild(card);
+            });
+
+            updateSaveStatusFromSession(date, dayId);
+        }
+
+        function saveCurrentSession() {
+            const date = getSelectedDate();
+            const container = document.getElementById("exercises");
+            const rows = container.querySelectorAll(".set-row");
+            const data = {
+                date: date,
+                dayId: currentDayIdTracker,
+                exercises: {}
+            };
+            
+            let hasData = false;
+
+            rows.forEach(function (row) {
+                const exId = row.dataset.exerciseId;
+                const setNumber = Number(row.dataset.setNumber || "0");
+                const peso = Number(row.querySelector(".input-weight").value || "0");
+                const reps = Number(row.querySelector(".input-reps").value || "0");
+                const nota = row.querySelector(".input-note").value || "";
+
+                if (peso > 0 || reps > 0) {
+                    hasData = true;
+                }
+
+                if (!data.exercises[exId]) {
+                    data.exercises[exId] = [];
+                }
+                data.exercises[exId].push({
+                    set: setNumber,
+                    peso: peso,
+                    reps: reps,
+                    nota: nota
+                });
+            });
+
+            if (!hasData) {
+                 showSaveStatus("Nessun dato inserito da salvare.", "warn");
+                 return;
+            }
+
+            const key = "workout-" + date + "-" + currentDayIdTracker;
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+                showSaveStatus("Allenamento salvato ✅", "ok");
+            } catch (e) {
+                console.error(e);
+                showSaveStatus("Errore nel salvataggio (localStorage pieno?).", "warn");
+            }
+        }
+
+        function clearCurrentSession() {
+            const date = getSelectedDate();
+            const key = "workout-" + date + "-" + currentDayIdTracker;
+            localStorage.removeItem(key);
+            renderDay(currentDayIdTracker);
+            showSaveStatus("Salvataggio cancellato per questo allenamento/data.", "warn");
+        }
+        
+        // --- STORICO ---
+        function renderHistory() {
+            const historyList = document.getElementById('all-sessions-list');
+            historyList.innerHTML = ''; 
+
+            const allKeys = Object.keys(localStorage);
+            const sessionKeys = allKeys.filter(
+                key => key.startsWith('workout-') &&
+                       key !== 'workout-program-config' &&
+                       key !== 'workout-user-info'
+            );
+            
+            sessionKeys.sort((a, b) => {
+                const dateA = a.substring(8, 18);
+                const dateB = b.substring(8, 18); 
+                if (dateA > dateB) return -1;
+                if (dateA < dateB) return 1;
+                return 0;
+            });
+            
+            if (sessionKeys.length === 0) {
+                historyList.innerHTML = '<p style="text-align: center; opacity: 0.7; padding: 15px 0; border: none;">Ancora nessun allenamento salvato. Inizia ad allenarti!</p>';
+                return;
+            }
+
+            let renderedCount = 0;
+
+            sessionKeys.forEach(key => {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) return;
+
+                    const sessionData = JSON.parse(raw);
+
+                    if (!sessionData || !sessionData.date || !sessionData.dayId) {
+                        return;
+                    }
+
+                    const hasExercises = sessionData.exercises && Object.keys(sessionData.exercises).length > 0;
+                    if (!hasExercises) return;
+
+                    const dayName = getDayNameFromConfig(sessionData.dayId);
+                    const date = sessionData.date;
+
+                    const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('it-IT', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+
+                    const entry = document.createElement('div');
+                    entry.className = 'history-entry';
+                    entry.innerHTML = `
+                        <span class="date">${formattedDate}</span>
+                        <span class="day-id">${dayName}</span>
+                    `;
+                    
+                    historyList.appendChild(entry);
+                    renderedCount++;
+                    
+                } catch (e) {
+                    console.error("Errore nel caricamento della chiave:", key, e);
+                }
+            });
+
+            if (renderedCount === 0) {
+                historyList.innerHTML = '<p style="text-align: center; opacity: 0.7; padding: 15px 0; border: none;">Ancora nessun allenamento salvato. Inizia ad allenarti!</p>';
+            }
+        }
+        
+        function findExerciseConfig(dayId, exerciseId) {
+             const config = getSavedConfig().rawObject;
+             if (config[dayId] && config[dayId].exercises) {
+                 return config[dayId].exercises.find(ex => ex.id === exerciseId);
+             }
+             return null;
+        }
+
+        function exportWorkoutData() {
+            const allKeys = Object.keys(localStorage);
+            const sessionKeys = allKeys.filter(
+                key => key.startsWith('workout-') &&
+                       key !== 'workout-program-config' &&
+                       key !== 'workout-user-info'
+            );
+            
+            if (sessionKeys.length === 0) {
+                alert("Nessun dato di allenamento da esportare.");
+                return;
+            }
+
+            sessionKeys.sort((a, b) => {
+                const dateA = a.substring(8, 18);
+                const dateB = b.substring(8, 18); 
+                if (dateA < dateB) return -1;
+                if (dateA > dateB) return 1;
+                return 0;
+            });
+            
+            let exportContent = `--- REPORT WORKOUT TRACKER ---\n\n`;
+            let exportedCount = 0;
+
+            sessionKeys.forEach(key => {
+                try {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) return;
+
+                    const sessionData = JSON.parse(raw);
+
+                    if (!sessionData || !sessionData.date || !sessionData.dayId || !sessionData.exercises) {
+                        return;
+                    }
+
+                    const exerciseIds = Object.keys(sessionData.exercises);
+                    if (exerciseIds.length === 0) {
+                        return;
+                    }
+                    
+                    const dayName = getDayNameFromConfig(sessionData.dayId);
+                    const date = sessionData.date;
+                    
+                    const formattedDate = new Date(date + 'T00:00:00').toLocaleDateString('it-IT', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        weekday: 'long'
+                    });
+
+                    exportContent += `=================================================\n`;
+                    exportContent += `SESSIONE: ${formattedDate} (${dayName})\n`;
+                    exportContent += `=================================================\n\n`;
+
+                    exerciseIds.forEach(exId => {
+                        const exerciseConfig = findExerciseConfig(sessionData.dayId, exId);
+                        const exName = exerciseConfig ? exerciseConfig.name : `Esercizio ID: ${exId}`;
+                        
+                        exportContent += `  [Esercizio] ${exName}\n`;
+                        
+                        const sets = sessionData.exercises[exId];
+                        sets.forEach(set => {
+                            const peso = set.peso || 0;
+                            const reps = set.reps || 0;
+                            const nota = set.nota ? `(Nota: ${set.nota})` : '';
+                            
+                            exportContent += `    Set ${set.set}: ${peso} kg x ${reps} ripetizioni ${nota}\n`;
+                        });
+                        exportContent += '\n'; 
+                    });
+                    
+                    exportContent += `-------------------------------------------------\n\n`;
+                    exportedCount++;
+
+                } catch (e) {
+                    console.error("Errore durante l'esportazione della chiave:", key, e);
+                    exportContent += `[ERRORE DI CARICAMENTO PER LA CHIAVE: ${key}]\n\n`;
+                }
+            });
+
+            if (exportedCount === 0) {
+                alert("Nessun dato di allenamento valido da esportare.");
+                return;
+            }
+
+            const blob = new Blob([exportContent], { type: 'text/plain;charset=utf-8' });
+            const today = todayISO();
+            const filename = `Workout_Export_${today}.txt`;
+            
+            if (window.navigator.msSaveOrOpenBlob) {
+                window.navigator.msSaveOrOpenBlob(blob, filename);
+            } else {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        // --- MODAL CRONOMETRO ---
+        function openTimerModal() {
+            document.getElementById('timer-modal').style.display = 'flex';
+        }
+
+        function closeTimerModal() {
+            if(isRunning) {
+                 startStopwatch(); 
+            }
+            document.getElementById('timer-modal').style.display = 'none';
+        }
+
+        // --- INIT ---
+        document.addEventListener("DOMContentLoaded", function () {
+            
+            // Applica tema salvato PRIMA di mostrare le schermate
+            loadTheme();
+
+            const rawConfig = localStorage.getItem('workout-program-config');
+            if (!rawConfig) {
+                 initConfigScreen();
+            } else {
+                 switchScreen('tracker');
+            }
+
+            const btnConfigSave = document.getElementById('btn-config-save');
+            if (btnConfigSave) {
+                btnConfigSave.addEventListener('click', saveAndStartApp);
+            }
+            
+            const linkModifyWorkout = document.getElementById('link-modify-workout');
+            if (linkModifyWorkout) {
+                 linkModifyWorkout.addEventListener('click', function(e) {
+                      e.preventDefault();
+                      initConfigScreen(); 
+                 });
+            }
+            
+            const resetLink = document.getElementById('reset-program-link');
+            if (resetLink) {
+                resetLink.addEventListener('click', function(event) {
+                    event.preventDefault(); 
+                    resetProgram();
+                });
+            }
+            
+            const btnClearAllSessionsHistory = document.getElementById('btn-clear-all-sessions-history');
+            if (btnClearAllSessionsHistory) {
+                 btnClearAllSessionsHistory.addEventListener('click', function(e) {
+                     e.preventDefault();
+                     clearAllSavedSessions();
+                 });
+            }
+            
+            const btnExportData = document.getElementById('btn-export-data');
+            if (btnExportData) {
+                btnExportData.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    exportWorkoutData();
+                });
+            }
+            
+            const linkShowHistory = document.getElementById('link-show-history');
+            if (linkShowHistory) {
+                 linkShowHistory.addEventListener('click', function(e) {
+                     e.preventDefault();
+                     switchScreen('history');
+                 });
+            }
+            
+            const btnBackToTracker = document.getElementById('btn-back-to-tracker');
+            if (btnBackToTracker) {
+                 btnBackToTracker.addEventListener('click', function(e) {
+                     e.preventDefault();
+                     switchScreen('tracker');
+                 });
+            }
+
+            const btnInfoBack = document.getElementById('btn-info-back');
+            if (btnInfoBack) {
+                btnInfoBack.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    switchScreen('tracker');
+                });
+            }
+
+            const linkInfo = document.getElementById('link-info');
+            if (linkInfo) {
+                linkInfo.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    switchScreen('info');
+                });
+            }
+
+            const btnSaveInfo = document.getElementById('btn-save-info');
+            if (btnSaveInfo) {
+                btnSaveInfo.addEventListener('click', function() {
+                    saveUserInfo();
+                });
+            }
+
+            const dateInput = document.getElementById("date");
+            if (dateInput) {
+                dateInput.addEventListener("change", function () {
+                    renderDay(currentDayIdTracker);
+                });
+            }
+
+            const saveBtn = document.getElementById("btn-save");
+            if (saveBtn) {
+                saveBtn.addEventListener("click", saveCurrentSession);
+            }
+
+            const clearBtn = document.getElementById("btn-clear");
+            if (clearBtn) {
+                clearBtn.addEventListener("click", function () {
+                    if (confirm("Sicuro di voler cancellare i dati di questo allenamento per questa data?")) {
+                        clearCurrentSession();
+                    }
+                });
+            }
+            
+            const menuIcon = document.getElementById('menuIcon');
+            const navMenu = document.getElementById('navMenu');
+            const timerIcon = document.getElementById('timerIcon'); 
+            const timerModal = document.getElementById('timer-modal');
+            const btnCloseTimer = document.getElementById('btn-close-timer');
+            
+            const btnStartTimer = document.getElementById('btn-start-timer');
+            const btnResetTimer = document.getElementById('btn-reset-timer');
+            
+            if (btnStartTimer) {
+                btnStartTimer.addEventListener('click', startStopwatch);
+            }
+            
+            if (btnResetTimer) {
+                btnResetTimer.addEventListener('click', resetStopwatch);
+            }
+
+            if (menuIcon && navMenu) {
+                menuIcon.addEventListener('click', function() {
+                    navMenu.classList.toggle('active');
+                    menuIcon.classList.toggle('open');
+                    closeTimerModal(); 
+                    closeThemeModal();
+                });
+            }
+            
+            if (timerIcon) {
+                timerIcon.addEventListener('click', function() {
+                    openTimerModal();
+                    if (navMenu) navMenu.classList.remove('active');
+                    if (menuIcon) menuIcon.classList.remove('open');
+                });
+            }
+
+            if (btnCloseTimer) {
+                btnCloseTimer.addEventListener('click', closeTimerModal);
+            }
+            
+            if (timerModal) {
+                 timerModal.addEventListener('click', function(event) {
+                    if (event.target === timerModal) {
+                        closeTimerModal();
+                    }
+                 });
+            }
+
+            // Link CAMBIA TEMA
+            const linkTheme = document.getElementById('link-theme');
+            const themeModal = document.getElementById('theme-modal');
+            const btnCloseTheme = document.getElementById('btn-close-theme');
+
+            if (linkTheme) {
+                linkTheme.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    openThemeModal();
+                    if (navMenu) navMenu.classList.remove('active');
+                    if (menuIcon) menuIcon.classList.remove('open');
+                });
+            }
+
+            if (btnCloseTheme) {
+                btnCloseTheme.addEventListener('click', function() {
+                    closeThemeModal();
+                });
+            }
+
+            if (themeModal) {
+                themeModal.addEventListener('click', function(e) {
+                    if (e.target === themeModal) {
+                        closeThemeModal();
+                    }
+                });
+            }
+
+            // Click sulle card tema
+            const themeOptions = document.querySelectorAll('.theme-option');
+            themeOptions.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const themeName = this.dataset.theme;
+                    applyTheme(themeName);
+                    highlightThemeOption(themeName);
+                });
+            });
+
+            // Chiudi menu quando si cliccano link "semplici"
+            const navLinks = navMenu ? navMenu.querySelectorAll('a') : [];
+            navLinks.forEach(link => {
+                if (link.id !== 'link-show-history' && 
+                    link.id !== 'link-modify-workout' && 
+                    link.id !== 'reset-program-link' &&
+                    link.id !== 'link-info' &&
+                    link.id !== 'link-theme') 
+                {
+                    link.addEventListener('click', () => {
+                        if (navMenu) navMenu.classList.remove('active');
+                        if (menuIcon) menuIcon.classList.remove('open');
+                    });
+                }
+            });
+            
+            if (stopwatchDisplay) {
+                 stopwatchDisplay.textContent = '00:00.00';
+            }
+
+            // Risincronizza evidenziazione tema (in caso DOM creato dopo loadTheme)
+            highlightThemeOption(localStorage.getItem('workout-theme') || 'default');
+        });
+    </script>
+</body>
+</html>
